@@ -510,3 +510,12 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 <sub>Built with ❤️ by QuantumNous</sub>
 
 </div>
+
+---
+
+## HoYoAI 维护说明
+
+- 本仓为 [QuantumNous/new-api](https://github.com/QuantumNous/new-api) 的组织 fork：`hoyoai/hoyoai-api`
+- **主开发 / 发布分支：`hoyo_main`**（勿以 upstream `main` 直接发正式）
+- 运维与部署真源：`hoyoai/hoyo-develop`（`skills/hoyo-new-api`）
+- 同步上游：`git fetch upstream && git merge upstream/main`（在 `hoyo_main` 上处理冲突）
