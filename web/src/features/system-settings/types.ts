@@ -135,6 +135,7 @@ export type SystemTaskListResponse = {
 export type SiteSettings = {
   Notice: string
   SystemName: string
+  HeaderShowSystemNameEnabled: boolean
   Logo: string
   Footer: string
   About: string
@@ -144,6 +145,7 @@ export type SiteSettings = {
   'legal.user_agreement': string
   'legal.privacy_policy': string
   HeaderNavModules: string
+  HeaderNavConfig: string
   SidebarModulesAdmin: string
 }
 

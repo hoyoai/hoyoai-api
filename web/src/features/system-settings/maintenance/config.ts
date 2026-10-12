@@ -182,6 +182,210 @@ export function serializeHeaderNavModules(
   return JSON.stringify(config)
 }
 
+export type HeaderNavItemKind = 'builtin' | 'custom'
+
+export type HeaderNavConfigItem = {
+  kind: HeaderNavItemKind
+  key?: string
+  id?: string
+  title?: string
+  content?: string
+  enabled: boolean
+  require_auth?: boolean
+}
+
+export type HeaderNavOrderedConfig = {
+  items: HeaderNavConfigItem[]
+}
+
+export const HEADER_NAV_CONFIG_DEFAULT: HeaderNavOrderedConfig = {
+  items: [
+    { kind: 'builtin', key: 'home', enabled: true },
+    { kind: 'builtin', key: 'console', enabled: true },
+    {
+      kind: 'builtin',
+      key: 'pricing',
+      enabled: true,
+      require_auth: false,
+    },
+    {
+      kind: 'builtin',
+      key: 'rankings',
+      enabled: true,
+      require_auth: false,
+    },
+    { kind: 'builtin', key: 'docs', enabled: true },
+    { kind: 'builtin', key: 'about', enabled: true },
+  ],
+}
+
+const HEADER_NAV_CUSTOM_ID_PATTERN = /^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/
+
+export function isValidHeaderNavCustomId(id: string): boolean {
+  return HEADER_NAV_CUSTOM_ID_PATTERN.test(id)
+}
+
+export function cloneHeaderNavConfig(
+  config: HeaderNavOrderedConfig
+): HeaderNavOrderedConfig {
+  return {
+    items: config.items.map((item) => ({ ...item })),
+  }
+}
+
+export function headerNavModulesToConfig(
+  modules: HeaderNavModulesConfig
+): HeaderNavOrderedConfig {
+  return {
+    items: [
+      {
+        kind: 'builtin',
+        key: 'home',
+        enabled: Boolean(modules.home),
+      },
+      {
+        kind: 'builtin',
+        key: 'console',
+        enabled: Boolean(modules.console),
+      },
+      {
+        kind: 'builtin',
+        key: 'pricing',
+        enabled: Boolean(modules.pricing?.enabled),
+        require_auth: Boolean(modules.pricing?.requireAuth),
+      },
+      {
+        kind: 'builtin',
+        key: 'rankings',
+        enabled: Boolean(modules.rankings?.enabled),
+        require_auth: Boolean(modules.rankings?.requireAuth),
+      },
+      {
+        kind: 'builtin',
+        key: 'docs',
+        enabled: Boolean(modules.docs),
+      },
+      {
+        kind: 'builtin',
+        key: 'about',
+        enabled: Boolean(modules.about),
+      },
+    ],
+  }
+}
+
+export function parseHeaderNavConfigOption(
+  value: string | null | undefined,
+  fallbackModules?: HeaderNavModulesConfig
+): HeaderNavOrderedConfig {
+  if (value && value.trim() !== '') {
+    try {
+      const parsed = JSON.parse(value) as { items?: unknown }
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+        const items: HeaderNavConfigItem[] = []
+        for (const entry of parsed.items) {
+          if (!entry || typeof entry !== 'object') continue
+          const record = entry as Record<string, unknown>
+          if (record.kind === 'builtin') {
+            const key = typeof record.key === 'string' ? record.key : ''
+            if (!key) continue
+            const item: HeaderNavConfigItem = {
+              kind: 'builtin',
+              key,
+              enabled: toBoolean(record.enabled, true),
+            }
+            if (key === 'pricing' || key === 'rankings') {
+              item.require_auth = toBoolean(record.require_auth, false)
+            }
+            items.push(item)
+            continue
+          }
+          if (record.kind === 'custom') {
+            const id = typeof record.id === 'string' ? record.id.trim() : ''
+            const title = typeof record.title === 'string' ? record.title : ''
+            if (!id || !title) continue
+            items.push({
+              kind: 'custom',
+              id,
+              title,
+              content:
+                typeof record.content === 'string' ? record.content : '',
+              enabled: toBoolean(record.enabled, true),
+              require_auth: toBoolean(record.require_auth, false),
+            })
+          }
+        }
+        if (items.length > 0) {
+          return { items }
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  if (fallbackModules) {
+    return headerNavModulesToConfig(fallbackModules)
+  }
+  return cloneHeaderNavConfig(HEADER_NAV_CONFIG_DEFAULT)
+}
+
+export function serializeHeaderNavConfig(
+  config: HeaderNavOrderedConfig
+): string {
+  return JSON.stringify({
+    items: config.items.map((item) => {
+      if (item.kind === 'builtin') {
+        const out: HeaderNavConfigItem = {
+          kind: 'builtin',
+          key: item.key,
+          enabled: item.enabled,
+        }
+        if (item.key === 'pricing' || item.key === 'rankings') {
+          out.require_auth = Boolean(item.require_auth)
+        }
+        return out
+      }
+      return {
+        kind: 'custom',
+        id: item.id,
+        title: item.title,
+        content: item.content ?? '',
+        enabled: item.enabled,
+        require_auth: Boolean(item.require_auth),
+      }
+    }),
+  })
+}
+
+export function slugifyHeaderNavCustomId(
+  title: string,
+  existingIds: Set<string>
+): string {
+  const base = title
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
+
+  let candidate =
+    base && isValidHeaderNavCustomId(base)
+      ? base
+      : `page-${Math.random().toString(36).slice(2, 8)}`
+
+  if (!isValidHeaderNavCustomId(candidate)) {
+    candidate = `page-${Math.random().toString(36).slice(2, 8)}`
+  }
+
+  if (!existingIds.has(candidate)) return candidate
+
+  let suffix = 2
+  while (existingIds.has(`${candidate}-${suffix}`)) {
+    suffix += 1
+  }
+  return `${candidate}-${suffix}`
+}
+
 export function parseSidebarModulesAdmin(
   value: string | null | undefined
 ): SidebarModulesAdminConfig {

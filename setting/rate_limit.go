@@ -18,11 +18,18 @@ const maxRateLimitDurationSeconds = 24 * 60 * 60
 // window of at most 24 hours.
 const maxModelRequestRateLimitCount int64 = math.MaxInt64 / maxRateLimitDurationSeconds
 
-var ModelRequestRateLimitEnabled = false
+var ModelRequestRateLimitEnabled = true
 var ModelRequestRateLimitDurationMinutes = 1
 var ModelRequestRateLimitCount = 0
 var ModelRequestRateLimitSuccessCount = 1000
-var ModelRequestRateLimitGroup = map[string][2]int{}
+
+// ModelRequestRateLimitGroup defaults to UniAPI-aligned membership RPM
+// (default/vip/vip2). Existing DB options override on load.
+var ModelRequestRateLimitGroup = map[string][2]int{
+	"default": {0, 5},
+	"vip":     {0, 300},
+	"vip2":    {0, 2000},
+}
 var ModelRequestRateLimitMutex sync.RWMutex
 
 func ModelRequestRateLimitGroup2JSONString() string {
@@ -37,8 +44,8 @@ func ModelRequestRateLimitGroup2JSONString() string {
 }
 
 func UpdateModelRequestRateLimitGroupByJSONString(jsonStr string) error {
-	ModelRequestRateLimitMutex.RLock()
-	defer ModelRequestRateLimitMutex.RUnlock()
+	ModelRequestRateLimitMutex.Lock()
+	defer ModelRequestRateLimitMutex.Unlock()
 
 	ModelRequestRateLimitGroup = make(map[string][2]int)
 	return common.Unmarshal([]byte(jsonStr), &ModelRequestRateLimitGroup)

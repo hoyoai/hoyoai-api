@@ -18,9 +18,10 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { SystemInfoSection } from '../general/system-info-section'
 import {
+  parseHeaderNavConfigOption,
   parseHeaderNavModules,
   parseSidebarModulesAdmin,
-  serializeHeaderNavModules,
+  serializeHeaderNavConfig,
   serializeSidebarModulesAdmin,
 } from '../maintenance/config'
 import { HeaderNavigationSection } from '../maintenance/header-navigation-section'
@@ -37,6 +38,7 @@ const SITE_SECTIONS = [
       <SystemInfoSection
         defaultValues={{
           SystemName: settings.SystemName,
+          HeaderShowSystemNameEnabled: settings.HeaderShowSystemNameEnabled,
           Logo: settings.Logo,
           Footer: settings.Footer,
           About: settings.About,
@@ -62,8 +64,12 @@ const SITE_SECTIONS = [
     id: 'header-navigation',
     titleKey: 'Header navigation',
     build: (settings: SiteSettings) => {
-      const headerNavConfig = parseHeaderNavModules(settings.HeaderNavModules)
-      const headerNavSerialized = serializeHeaderNavModules(headerNavConfig)
+      const fallbackModules = parseHeaderNavModules(settings.HeaderNavModules)
+      const headerNavConfig = parseHeaderNavConfigOption(
+        settings.HeaderNavConfig,
+        fallbackModules
+      )
+      const headerNavSerialized = serializeHeaderNavConfig(headerNavConfig)
       return (
         <HeaderNavigationSection
           config={headerNavConfig}

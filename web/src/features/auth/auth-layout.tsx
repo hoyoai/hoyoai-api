@@ -28,30 +28,32 @@ type AuthLayoutProps = {
 
 export function AuthLayout({ children }: AuthLayoutProps) {
   const { t } = useTranslation()
-  const { systemName, logo, loading } = useSystemConfig()
+  const { systemName, logo, loading, headerShowSystemNameEnabled } =
+    useSystemConfig()
+  const showName = Boolean(headerShowSystemNameEnabled)
 
   return (
     <div className='relative grid h-svh max-w-none'>
       <Link
         to='/'
-        className='absolute top-4 left-4 z-10 flex items-center gap-2 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
+        className='absolute top-4 left-4 z-10 flex items-center gap-2.5 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
       >
-        <div className='relative h-8 w-8'>
+        <div className='flex h-11 max-w-[min(260px,48vw)] min-h-11 w-auto shrink-0 items-center justify-center max-sm:h-9 max-sm:max-w-[min(200px,58vw)] max-sm:min-h-9'>
           {loading ? (
-            <Skeleton className='absolute inset-0 rounded-full' />
+            <Skeleton className='h-full w-28 rounded-md' />
           ) : (
             <img
               src={logo}
               alt={t('Logo')}
-              className='h-8 w-8 rounded-full object-cover'
+              className='h-full w-auto max-w-full rounded-none object-contain'
             />
           )}
         </div>
-        {loading ? (
+        {loading && showName ? (
           <Skeleton className='h-6 w-24' />
-        ) : (
+        ) : showName ? (
           <h1 className='text-xl font-medium'>{systemName}</h1>
-        )}
+        ) : null}
       </Link>
       <div className='container flex items-center pt-16 sm:pt-0'>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>

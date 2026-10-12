@@ -40,6 +40,7 @@ export interface CurrencyConfig {
 
 export interface SystemConfig {
   systemName: string
+  headerShowSystemNameEnabled?: boolean
   logo: string
   footerHtml?: string
   demoSiteEnabled?: boolean
@@ -74,6 +75,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
     (set) => ({
       config: {
         systemName: DEFAULT_SYSTEM_NAME,
+        headerShowSystemNameEnabled: false,
         logo: DEFAULT_LOGO,
         currency: { ...DEFAULT_CURRENCY_CONFIG },
       },

@@ -149,12 +149,14 @@ export function About() {
   if (isUrl) {
     return (
       <PublicLayout showMainContainer={false}>
-        <iframe
-          src={rawContent}
-          className='h-[calc(100vh-3.5rem)] w-full border-0'
-          title={t('About')}
-          sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts'
-        />
+        <main className='flex min-h-[calc(100vh-4rem)] pt-16'>
+          <iframe
+            src={rawContent}
+            className='block h-[calc(100vh-4rem)] min-h-[70vh] w-full border-0 supports-[height:100svh]:h-[calc(100svh-4rem)]'
+            title={t('About')}
+            sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts'
+          />
+        </main>
       </PublicLayout>
     )
   }
@@ -162,12 +164,14 @@ export function About() {
   if (contentIsHtml) {
     return (
       <PublicLayout showMainContainer={false}>
-        <RichContent
-          mode='html'
-          htmlVariant='isolated'
-          content={rawContent}
-          className='prose-neutral dark:prose-invert max-w-none'
-        />
+        <main className='pt-16'>
+          <RichContent
+            mode='html'
+            htmlVariant='isolated'
+            content={rawContent}
+            className='prose-neutral dark:prose-invert max-w-none'
+          />
+        </main>
       </PublicLayout>
     )
   }

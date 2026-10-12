@@ -29,7 +29,9 @@ import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedChat2linkRouteImport } from './routes/_authenticated/chat2link'
 import { Route as AuthenticatedSystemSettingsRouteRouteImport } from './routes/_authenticated/system-settings/route'
 import { Route as AboutIndexRouteImport } from './routes/about/index'
+import { Route as BenefitsIndexRouteImport } from './routes/benefits/index'
 import { Route as OauthProviderRouteImport } from './routes/oauth/$provider'
+import { Route as PPageIdRouteImport } from './routes/p/$pageId'
 import { Route as PricingIndexRouteImport } from './routes/pricing/index'
 import { Route as RankingsIndexRouteImport } from './routes/rankings/index'
 import { Route as SetupIndexRouteImport } from './routes/setup/index'
@@ -170,9 +172,19 @@ const AboutIndexRoute = AboutIndexRouteImport.update({
   path: '/about/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BenefitsIndexRoute = BenefitsIndexRouteImport.update({
+  id: '/benefits/',
+  path: '/benefits/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OauthProviderRoute = OauthProviderRouteImport.update({
   id: '/oauth/$provider',
   path: '/oauth/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PPageIdRoute = PPageIdRouteImport.update({
+  id: '/p/$pageId',
+  path: '/p/$pageId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingIndexRoute = PricingIndexRouteImport.update({
@@ -427,7 +439,9 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/p/$pageId': typeof PPageIdRoute
   '/about/': typeof AboutIndexRoute
+  '/benefits/': typeof BenefitsIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -487,7 +501,9 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/p/$pageId': typeof PPageIdRoute
   '/about': typeof AboutIndexRoute
+  '/benefits': typeof BenefitsIndexRoute
   '/pricing': typeof PricingIndexRoute
   '/rankings': typeof RankingsIndexRoute
   '/setup': typeof SetupIndexRoute
@@ -551,7 +567,9 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/p/$pageId': typeof PPageIdRoute
   '/about/': typeof AboutIndexRoute
+  '/benefits/': typeof BenefitsIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -614,7 +632,9 @@ export interface FileRouteTypes {
     | '/503'
     | '/chat2link'
     | '/oauth/$provider'
+    | '/p/$pageId'
     | '/about/'
+    | '/benefits/'
     | '/pricing/'
     | '/rankings/'
     | '/setup/'
@@ -674,7 +694,9 @@ export interface FileRouteTypes {
     | '/503'
     | '/chat2link'
     | '/oauth/$provider'
+    | '/p/$pageId'
     | '/about'
+    | '/benefits'
     | '/pricing'
     | '/rankings'
     | '/setup'
@@ -737,7 +759,9 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/chat2link'
     | '/oauth/$provider'
+    | '/p/$pageId'
     | '/about/'
+    | '/benefits/'
     | '/pricing/'
     | '/rankings/'
     | '/setup/'
@@ -792,7 +816,9 @@ export interface RootRouteChildren {
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
   OauthProviderRoute: typeof OauthProviderRoute
+  PPageIdRoute: typeof PPageIdRoute
   AboutIndexRoute: typeof AboutIndexRoute
+  BenefitsIndexRoute: typeof BenefitsIndexRoute
   PricingIndexRoute: typeof PricingIndexRoute
   RankingsIndexRoute: typeof RankingsIndexRoute
   SetupIndexRoute: typeof SetupIndexRoute
@@ -941,11 +967,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/benefits/': {
+      id: '/benefits/'
+      path: '/benefits'
+      fullPath: '/benefits/'
+      preLoaderRoute: typeof BenefitsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/oauth/$provider': {
       id: '/oauth/$provider'
       path: '/oauth/$provider'
       fullPath: '/oauth/$provider'
       preLoaderRoute: typeof OauthProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$pageId': {
+      id: '/p/$pageId'
+      path: '/p/$pageId'
+      fullPath: '/p/$pageId'
+      preLoaderRoute: typeof PPageIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing/': {
@@ -1381,7 +1421,9 @@ const rootRouteChildren: RootRouteChildren = {
   errors500Route: errors500Route,
   errors503Route: errors503Route,
   OauthProviderRoute: OauthProviderRoute,
+  PPageIdRoute: PPageIdRoute,
   AboutIndexRoute: AboutIndexRoute,
+  BenefitsIndexRoute: BenefitsIndexRoute,
   PricingIndexRoute: PricingIndexRoute,
   RankingsIndexRoute: RankingsIndexRoute,
   SetupIndexRoute: SetupIndexRoute,

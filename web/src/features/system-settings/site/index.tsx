@@ -26,7 +26,8 @@ import {
 
 const defaultSiteSettings: SiteSettings = {
   Notice: '',
-  SystemName: 'New API',
+  SystemName: 'HoYoAI',
+  HeaderShowSystemNameEnabled: false,
   Logo: '',
   Footer: '',
   About: '',
@@ -36,6 +37,7 @@ const defaultSiteSettings: SiteSettings = {
   'legal.user_agreement': '',
   'legal.privacy_policy': '',
   HeaderNavModules: '',
+  HeaderNavConfig: '',
   SidebarModulesAdmin: '',
 }
 

@@ -66,6 +66,7 @@ func GetStatus(c *gin.Context) {
 		"telegram_bot_name":           common.TelegramBotName,
 		"theme":                       "default",
 		"system_name":                 common.SystemName,
+		"header_show_system_name_enabled": common.HeaderShowSystemNameEnabled,
 		"logo":                        common.Logo,
 		"footer_html":                 common.Footer,
 		"wechat_qrcode":               common.WeChatAccountQRCodeImageURL,
@@ -109,6 +110,7 @@ func GetStatus(c *gin.Context) {
 
 		// 模块管理配置
 		"HeaderNavModules":    common.OptionMap["HeaderNavModules"],
+		"HeaderNavConfig":     common.OptionMap["HeaderNavConfig"],
 		"SidebarModulesAdmin": common.OptionMap["SidebarModulesAdmin"],
 
 		"oidc_enabled":                system_setting.GetOIDCSettings().Enabled,

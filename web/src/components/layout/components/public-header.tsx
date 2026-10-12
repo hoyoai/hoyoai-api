@@ -27,7 +27,6 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SystemUpdateAction } from '@/features/system-update/system-update-action'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { useTopNavLinks } from '@/hooks/use-top-nav-links'
@@ -88,6 +87,7 @@ export function PublicHeader(props: PublicHeaderProps) {
     logo: systemLogo,
     loading,
     logoLoaded,
+    headerShowSystemNameEnabled,
   } = useSystemConfig()
   const dynamicLinks = useTopNavLinks()
   const notifications = useNotifications()
@@ -96,7 +96,9 @@ export function PublicHeader(props: PublicHeaderProps) {
 
   const user = auth.user
   const isAuthenticated = !!user
-  const displaySiteName = customSiteName || systemName
+  const displaySiteName = headerShowSystemNameEnabled
+    ? customSiteName || systemName
+    : ''
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
 
   let logoContent: ReactNode = (
@@ -104,7 +106,7 @@ export function PublicHeader(props: PublicHeaderProps) {
       src={systemLogo}
       loading={loading}
       logoLoaded={logoLoaded}
-      className='size-full rounded-lg object-contain'
+      className='h-full w-auto max-h-full max-w-full rounded-none object-contain'
     />
   )
   if (customLogo) logoContent = customLogo
@@ -208,33 +210,32 @@ export function PublicHeader(props: PublicHeaderProps) {
         >
           <nav
             className={cn(
-              'flex items-center justify-between gap-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+              'flex items-center justify-between gap-2 overflow-visible transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
               scrolled
                 ? 'bg-background/60 ring-border/50 h-12 rounded-2xl pr-1.5 pl-4 shadow-[0_2px_16px_-6px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.02)] ring-[0.5px] backdrop-blur-2xl dark:shadow-[0_2px_16px_-6px_rgba(0,0,0,0.4)]'
                 : 'h-16 px-2'
             )}
           >
-            {/* Logo */}
-            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1 lg:min-w-36'>
+            {/* Logo — wordmark-friendly sizes (formerly nginx sub_filter) */}
+            <div className='flex min-w-0 flex-1 items-center gap-1.5 lg:min-w-36'>
               <Link
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-2.5'
               >
-                <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
+                <div className='flex h-11 max-w-[min(260px,48vw)] min-h-11 min-w-11 w-auto shrink-0 items-center justify-center overflow-visible transition-all duration-300 group-hover:scale-105 max-sm:h-9 max-sm:max-w-[min(200px,58vw)] max-sm:min-h-9'>
                   {logoContent}
                 </div>
-                <span
-                  className='max-w-48 truncate text-sm font-semibold tracking-tight'
-                  title={displaySiteName}
-                >
-                  {loading ? (
-                    <Skeleton className='h-4 w-16' />
-                  ) : (
-                    displaySiteName
-                  )}
-                </span>
+                {loading ? (
+                  <Skeleton className='h-4 w-16' />
+                ) : displaySiteName.trim() ? (
+                  <span
+                    className='max-w-48 truncate text-sm font-semibold tracking-tight'
+                    title={displaySiteName}
+                  >
+                    {displaySiteName}
+                  </span>
+                ) : null}
               </Link>
-              <SystemUpdateAction presentation='version' />
             </div>
 
             {/* Desktop nav */}

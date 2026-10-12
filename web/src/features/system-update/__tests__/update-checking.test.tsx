@@ -253,6 +253,10 @@ describe('administrator update entry', () => {
       const trigger = screen.getByRole('button', {
         name: 'System updates, current version: Unknown version',
       })
+      // Unknown builds stay icon-only in the header; do not paint "Unknown version".
+      expect(
+        within(trigger).queryByText('Unknown version')
+      ).not.toBeInTheDocument()
       await user.click(trigger)
       const dialog = screen.getByRole('dialog')
       expect(within(dialog).getByText('Unknown version')).toBeInTheDocument()
@@ -398,13 +402,15 @@ describe('version label presentation', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('shows an unknown-version label when the server has not supplied a version', async () => {
+  test('keeps unknown builds icon-only when the server has not supplied a version', async () => {
     client.setQueryData(STATUS_QUERY_KEY, { version: '' })
     render(<SystemUpdateAction presentation='version' />, { wrapper: Wrapper })
     const trigger = screen.getByRole('button', {
       name: 'System updates, current version: Unknown version',
     })
-    expect(within(trigger).getByText('Unknown version')).toBeInTheDocument()
+    expect(
+      within(trigger).queryByText('Unknown version')
+    ).not.toBeInTheDocument()
     await waitFor(() => expect(trigger).toHaveAttribute('aria-busy', 'false'))
     expect(
       within(trigger).queryByText('Update available')
