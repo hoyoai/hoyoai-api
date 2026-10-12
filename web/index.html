@@ -1,20 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <!-- Square mark for the browser tab; header logo uses the wordmark from status. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google" content="notranslate" />
 
-    <!-- Primary Meta Tags -->
-    <title>New API</title>
-    <meta name="title" content="New API" />
+    <!-- Primary Meta Tags — keep in sync with DEFAULT_SYSTEM_NAME for cold start -->
+    <title>HoYoAI</title>
+    <meta name="title" content="HoYoAI" />
     <meta
       name="description"
-      content="Unified AI API gateway and admin dashboard."
+      content="HoYoAI — unified AI API gateway."
     />
 
     <meta name="theme-color" content="#fff" />
+    <!-- Apply cached system name before the JS bundle loads to avoid title flash.
+         Do not overwrite the favicon with the header wordmark logo. -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('status')
+          if (!raw) return
+          var s = JSON.parse(raw)
+          var name =
+            s && typeof s.system_name === 'string' ? s.system_name.trim() : ''
+          if (name) {
+            document.title = name
+            var meta = document.querySelector('meta[name="title"]')
+            if (meta) meta.setAttribute('content', name)
+          }
+        } catch (e) {}
+      })()
+    </script>
     <!--umami-->
     <!--Google Analytics-->
   </head>

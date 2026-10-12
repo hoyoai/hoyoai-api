@@ -12,10 +12,14 @@ import (
 
 var StartTime = time.Now().Unix() // unit: second
 var Version = "v0.0.0"            // this hard coding will be replaced automatically when building, no need to manually change
-var SystemName = "New API"
+var SystemName = "HoYoAI"
 var Footer = ""
 var Logo = ""
 var TopUpLink = ""
+
+// HeaderShowSystemNameEnabled controls whether the system name text is shown
+// beside the logo in the public header. Keep false when the logo is already a wordmark.
+var HeaderShowSystemNameEnabled = false
 
 // var ChatLink = ""
 // var ChatLink2 = ""

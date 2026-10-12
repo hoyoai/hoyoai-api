@@ -16,86 +16,85 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import * as z from 'zod'
+import { toast } from 'sonner'
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 
 import {
   SettingsControlChildren,
   SettingsForm,
   SettingsSwitchContent,
   SettingsControlGroup,
-  SettingsSwitchItem,
+  SettingsSwitchRow,
 } from '../components/settings-form-layout'
 import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useUpdateOption } from '../hooks/use-update-option'
 import {
-  HEADER_NAV_DEFAULT,
-  type HeaderNavModulesConfig,
-  serializeHeaderNavModules,
+  HEADER_NAV_CONFIG_DEFAULT,
+  type HeaderNavConfigItem,
+  type HeaderNavOrderedConfig,
+  cloneHeaderNavConfig,
+  isValidHeaderNavCustomId,
+  serializeHeaderNavConfig,
+  slugifyHeaderNavCustomId,
 } from './config'
 
-const headerNavSchema = z.object({
-  home: z.boolean(),
-  console: z.boolean(),
-  pricingEnabled: z.boolean(),
-  pricingRequireAuth: z.boolean(),
-  rankingsEnabled: z.boolean(),
-  rankingsRequireAuth: z.boolean(),
-  docs: z.boolean(),
-  about: z.boolean(),
-})
-
-type HeaderNavFormValues = z.infer<typeof headerNavSchema>
-
 type HeaderNavigationSectionProps = {
-  config: HeaderNavModulesConfig
+  config: HeaderNavOrderedConfig
   initialSerialized: string
 }
 
-const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
-  home:
-    config.home === undefined ? HEADER_NAV_DEFAULT.home : Boolean(config.home),
-  console:
-    config.console === undefined
-      ? HEADER_NAV_DEFAULT.console
-      : Boolean(config.console),
-  pricingEnabled:
-    config.pricing?.enabled === undefined
-      ? HEADER_NAV_DEFAULT.pricing.enabled
-      : Boolean(config.pricing.enabled),
-  pricingRequireAuth:
-    config.pricing?.requireAuth === undefined
-      ? HEADER_NAV_DEFAULT.pricing.requireAuth
-      : Boolean(config.pricing.requireAuth),
-  rankingsEnabled:
-    config.rankings?.enabled === undefined
-      ? HEADER_NAV_DEFAULT.rankings.enabled
-      : Boolean(config.rankings.enabled),
-  rankingsRequireAuth:
-    config.rankings?.requireAuth === undefined
-      ? HEADER_NAV_DEFAULT.rankings.requireAuth
-      : Boolean(config.rankings.requireAuth),
-  docs:
-    config.docs === undefined ? HEADER_NAV_DEFAULT.docs : Boolean(config.docs),
-  about:
-    config.about === undefined
-      ? HEADER_NAV_DEFAULT.about
-      : Boolean(config.about),
-})
+function builtinLabel(
+  key: string | undefined,
+  t: (key: string) => string
+): string {
+  switch (key) {
+    case 'home':
+      return t('Home')
+    case 'console':
+      return t('Console')
+    case 'pricing':
+      return t('Model Square')
+    case 'rankings':
+      return t('Rankings')
+    case 'docs':
+      return t('Docs')
+    case 'about':
+      return t('About')
+    default:
+      return key ?? t('Built-in')
+  }
+}
+
+function builtinDescription(
+  key: string | undefined,
+  t: (key: string) => string
+): string {
+  switch (key) {
+    case 'home':
+      return t('Landing page with system overview.')
+    case 'console':
+      return t('User dashboard and quota controls.')
+    case 'pricing':
+      return t('Public model catalog and pricing page.')
+    case 'rankings':
+      return t('Public rankings page based on live usage data.')
+    case 'docs':
+      return t('Documentation or external knowledge base.')
+    case 'about':
+      return t('Static page describing the platform.')
+    default:
+      return ''
+  }
+}
 
 export function HeaderNavigationSection({
   config,
@@ -103,199 +102,280 @@ export function HeaderNavigationSection({
 }: HeaderNavigationSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const formDefaults = useMemo(() => toFormValues(config), [config])
-
-  const form = useForm<HeaderNavFormValues>({
-    resolver: zodResolver(headerNavSchema),
-    defaultValues: formDefaults,
-  })
+  const [items, setItems] = useState<HeaderNavConfigItem[]>(() =>
+    cloneHeaderNavConfig(config).items
+  )
 
   useEffect(() => {
-    form.reset(formDefaults)
-  }, [formDefaults, form])
+    setItems(cloneHeaderNavConfig(config).items)
+  }, [config])
 
-  const onSubmit = async (values: HeaderNavFormValues) => {
-    const payload: HeaderNavModulesConfig = {
-      ...config,
-      home: values.home,
-      console: values.console,
-      docs: values.docs,
-      about: values.about,
-      pricing: {
-        ...(config.pricing ?? HEADER_NAV_DEFAULT.pricing),
-        enabled: values.pricingEnabled,
-        requireAuth: values.pricingRequireAuth,
-      },
-      rankings: {
-        ...(config.rankings ?? HEADER_NAV_DEFAULT.rankings),
-        enabled: values.rankingsEnabled,
-        requireAuth: values.rankingsRequireAuth,
-      },
+  const serialized = useMemo(
+    () => serializeHeaderNavConfig({ items }),
+    [items]
+  )
+
+  const updateItem = (
+    index: number,
+    patch: Partial<HeaderNavConfigItem>
+  ) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, ...patch } : item))
+    )
+  }
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    setItems((prev) => {
+      const nextIndex = index + direction
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev
+      const next = [...prev]
+      const tmp = next[index]
+      next[index] = next[nextIndex]
+      next[nextIndex] = tmp
+      return next
+    })
+  }
+
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const addCustomPage = () => {
+    setItems((prev) => {
+      const existingIds = new Set(
+        prev
+          .filter((item) => item.kind === 'custom' && item.id)
+          .map((item) => item.id as string)
+      )
+      const title = t('Custom page')
+      const id = slugifyHeaderNavCustomId(title, existingIds)
+      return [
+        ...prev,
+        {
+          kind: 'custom',
+          id,
+          title,
+          content: '',
+          enabled: true,
+          require_auth: false,
+        },
+      ]
+    })
+  }
+
+  const saveNavigation = async () => {
+    for (const item of items) {
+      if (item.kind !== 'custom') continue
+      const id = item.id?.trim() ?? ''
+      const title = item.title?.trim() ?? ''
+      if (!title) {
+        toast.error(t('Custom page title is required'))
+        return
+      }
+      if (!isValidHeaderNavCustomId(id)) {
+        toast.error(t('Custom page id is invalid'))
+        return
+      }
     }
 
-    const serialized = serializeHeaderNavModules(payload)
+    const customIds = items
+      .filter((item) => item.kind === 'custom')
+      .map((item) => item.id)
+    if (new Set(customIds).size !== customIds.length) {
+      toast.error(t('Custom page ids must be unique'))
+      return
+    }
+
     if (serialized === initialSerialized) {
       return
     }
 
     await updateOption.mutateAsync({
-      key: 'HeaderNavModules',
+      key: 'HeaderNavConfig',
       value: serialized,
     })
   }
 
   const resetToDefault = () => {
-    form.reset(toFormValues(HEADER_NAV_DEFAULT))
+    setItems(cloneHeaderNavConfig(HEADER_NAV_CONFIG_DEFAULT).items)
   }
-
-  const simpleModules: Array<{
-    key: keyof HeaderNavFormValues
-    title: string
-    description: string
-  }> = [
-    {
-      key: 'home',
-      title: t('Home'),
-      description: t('Landing page with system overview.'),
-    },
-    {
-      key: 'console',
-      title: t('Console'),
-      description: t('User dashboard and quota controls.'),
-    },
-    {
-      key: 'docs',
-      title: t('Docs'),
-      description: t('Documentation or external knowledge base.'),
-    },
-    {
-      key: 'about',
-      title: t('About'),
-      description: t('Static page describing the platform.'),
-    },
-  ]
-
-  const accessModules: Array<{
-    enabledKey: keyof HeaderNavFormValues
-    requireAuthKey: keyof HeaderNavFormValues
-    requireAuthDependsOn: 'pricingEnabled' | 'rankingsEnabled'
-    title: string
-    description: string
-    requireAuthTitle: string
-    requireAuthDescription: string
-  }> = [
-    {
-      enabledKey: 'pricingEnabled',
-      requireAuthKey: 'pricingRequireAuth',
-      requireAuthDependsOn: 'pricingEnabled',
-      title: t('Model Square'),
-      description: t('Public model catalog and pricing page.'),
-      requireAuthTitle: t('Require login to view models'),
-      requireAuthDescription: t(
-        'Visitors must authenticate before accessing the pricing directory.'
-      ),
-    },
-    {
-      enabledKey: 'rankingsEnabled',
-      requireAuthKey: 'rankingsRequireAuth',
-      requireAuthDependsOn: 'rankingsEnabled',
-      title: t('Rankings'),
-      description: t('Public rankings page based on live usage data.'),
-      requireAuthTitle: t('Require login to view rankings'),
-      requireAuthDescription: t(
-        'Visitors must authenticate before accessing the rankings page.'
-      ),
-    },
-  ]
 
   return (
     <SettingsSection title={t('Header navigation')}>
-      <Form {...form}>
-        <SettingsForm onSubmit={form.handleSubmit(onSubmit)}>
-          <SettingsPageFormActions
-            onSave={form.handleSubmit(onSubmit)}
-            onReset={resetToDefault}
-            isSaving={updateOption.isPending}
-            resetLabel='Reset to default'
-            saveLabel='Save navigation'
-          />
-          <div className='grid gap-4 md:grid-cols-2'>
-            {simpleModules.map((module) => (
-              <FormField
-                key={module.key}
-                control={form.control}
-                name={module.key}
-                render={({ field }) => (
-                  <SettingsSwitchItem>
-                    <SettingsSwitchContent>
-                      <FormLabel>{module.title}</FormLabel>
-                      <FormDescription>{module.description}</FormDescription>
-                    </SettingsSwitchContent>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </SettingsSwitchItem>
-                )}
-              />
-            ))}
-          </div>
+      <SettingsForm
+        onSubmit={(event) => {
+          event.preventDefault()
+          void saveNavigation()
+        }}
+      >
+        <SettingsPageFormActions
+          onSave={() => {
+            void saveNavigation()
+          }}
+          onReset={resetToDefault}
+          isSaving={updateOption.isPending}
+          resetLabel='Reset to default'
+          saveLabel='Save navigation'
+        />
 
-          <div className='grid gap-4 lg:grid-cols-2'>
-            {accessModules.map((module) => (
-              <SettingsControlGroup key={module.enabledKey}>
-                <FormField
-                  control={form.control}
-                  name={module.enabledKey}
-                  render={({ field }) => (
-                    <SettingsSwitchItem>
+        <p className='text-muted-foreground text-sm'>
+          {t(
+            'Reorder built-in and custom pages. Custom pages are available at /p/{id}.'
+          )}
+        </p>
+
+        <div className='flex flex-col gap-3'>
+          {items.map((item, index) => {
+            const rowKey =
+              item.kind === 'builtin'
+                ? `builtin-${item.key}-${index}`
+                : `custom-${item.id}-${index}`
+            const supportsAuth =
+              item.kind === 'custom' ||
+              item.key === 'pricing' ||
+              item.key === 'rankings'
+
+            return (
+              <SettingsControlGroup key={rowKey}>
+                <div className='flex flex-wrap items-start justify-between gap-3'>
+                  <div className='min-w-0 space-y-1'>
+                    <div className='text-sm font-medium'>
+                      {item.kind === 'builtin'
+                        ? builtinLabel(item.key, t)
+                        : (item.title?.trim() || t('Custom page'))}
+                    </div>
+                    <p className='text-muted-foreground text-xs'>
+                      {item.kind === 'builtin'
+                        ? builtinDescription(item.key, t)
+                        : t('Path: /p/{{id}}', { id: item.id })}
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon-sm'
+                      aria-label={t('Move up')}
+                      disabled={index === 0}
+                      onClick={() => moveItem(index, -1)}
+                    >
+                      <ArrowUp className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon-sm'
+                      aria-label={t('Move down')}
+                      disabled={index === items.length - 1}
+                      onClick={() => moveItem(index, 1)}
+                    >
+                      <ArrowDown className='h-4 w-4' />
+                    </Button>
+                    {item.kind === 'custom' ? (
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon-sm'
+                        aria-label={t('Delete')}
+                        onClick={() => removeItem(index)}
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <SettingsSwitchRow>
+                  <SettingsSwitchContent>
+                    <Label className='text-sm font-medium'>{t('Enable')}</Label>
+                  </SettingsSwitchContent>
+                  <Switch
+                    checked={item.enabled}
+                    onCheckedChange={(checked) =>
+                      updateItem(index, { enabled: checked })
+                    }
+                  />
+                </SettingsSwitchRow>
+
+                {supportsAuth ? (
+                  <SettingsControlChildren>
+                    <SettingsSwitchRow className='py-2'>
                       <SettingsSwitchContent>
-                        <FormLabel>{module.title}</FormLabel>
-                        <FormDescription>{module.description}</FormDescription>
+                        <Label className='text-sm font-medium'>
+                          {t('Require login')}
+                        </Label>
+                        <p className='text-muted-foreground text-xs'>
+                          {item.key === 'pricing'
+                            ? t(
+                                'Visitors must authenticate before accessing the pricing directory.'
+                              )
+                            : null}
+                          {item.key === 'rankings'
+                            ? t(
+                                'Visitors must authenticate before accessing the rankings page.'
+                              )
+                            : null}
+                          {item.kind === 'custom'
+                            ? t(
+                                'Visitors must authenticate before opening this page.'
+                              )
+                            : null}
+                        </p>
                       </SettingsSwitchContent>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </SettingsSwitchItem>
-                  )}
-                />
+                      <Switch
+                        checked={Boolean(item.require_auth)}
+                        onCheckedChange={(checked) =>
+                          updateItem(index, { require_auth: checked })
+                        }
+                        disabled={!item.enabled}
+                      />
+                    </SettingsSwitchRow>
+                  </SettingsControlChildren>
+                ) : null}
 
-                <FormField
-                  control={form.control}
-                  name={module.requireAuthKey}
-                  render={({ field }) => (
-                    <SettingsControlChildren>
-                      <SettingsSwitchItem className='py-2'>
-                        <SettingsSwitchContent>
-                          <FormLabel>{module.requireAuthTitle}</FormLabel>
-                          <FormDescription>
-                            {module.requireAuthDescription}
-                          </FormDescription>
-                        </SettingsSwitchContent>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={!form.watch(module.requireAuthDependsOn)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </SettingsSwitchItem>
-                    </SettingsControlChildren>
-                  )}
-                />
+                {item.kind === 'custom' ? (
+                  <div className='grid gap-3 pt-1'>
+                    <div className='space-y-1.5'>
+                      <Label htmlFor={`nav-title-${index}`}>
+                        {t('Custom page title')}
+                      </Label>
+                      <Input
+                        id={`nav-title-${index}`}
+                        value={item.title ?? ''}
+                        onChange={(event) =>
+                          updateItem(index, { title: event.target.value })
+                        }
+                        placeholder={t('Custom page title')}
+                      />
+                    </div>
+                    <div className='space-y-1.5'>
+                      <Label htmlFor={`nav-content-${index}`}>
+                        {t('Content')}
+                      </Label>
+                      <Textarea
+                        id={`nav-content-${index}`}
+                        value={item.content ?? ''}
+                        onChange={(event) =>
+                          updateItem(index, { content: event.target.value })
+                        }
+                        placeholder={t('URL or HTML/Markdown')}
+                        rows={5}
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </SettingsControlGroup>
-            ))}
-          </div>
-        </SettingsForm>
-      </Form>
+            )
+          })}
+        </div>
+
+        <div>
+          <Button type='button' variant='outline' onClick={addCustomPage}>
+            <Plus className='h-4 w-4' />
+            {t('Add custom page')}
+          </Button>
+        </div>
+      </SettingsForm>
     </SettingsSection>
   )
 }

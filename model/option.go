@@ -77,8 +77,11 @@ func InitOptionMap() {
 	common.OptionMap["Notice"] = ""
 	common.OptionMap["About"] = ""
 	common.OptionMap["HomePageContent"] = ""
+	common.OptionMap["HeaderNavConfig"] = setting.HeaderNavConfig2JSONString()
+	common.OptionMap["MembershipContactPhone"] = setting.GetMembershipContactPhone()
 	common.OptionMap["Footer"] = common.Footer
 	common.OptionMap["SystemName"] = common.SystemName
+	common.OptionMap["HeaderShowSystemNameEnabled"] = strconv.FormatBool(common.HeaderShowSystemNameEnabled)
 	common.OptionMap["Logo"] = common.Logo
 	common.OptionMap["ServerAddress"] = ""
 	common.OptionMap["TaskPublicAddress"] = system_setting.TaskPublicAddress
@@ -192,6 +195,42 @@ func InitOptionMap() {
 
 	common.OptionMapRWMutex.Unlock()
 	loadOptionsFromDatabase()
+	seedMembershipRateLimitsIfNeeded()
+}
+
+// seedMembershipRateLimitsIfNeeded fills missing default/vip/vip2 RPM entries
+// (UniAPI-aligned) and persists when the in-memory map changed.
+func seedMembershipRateLimitsIfNeeded() {
+	if jsonOut, ok := setting.EnsureDefaultMembershipDisplayGroups(); ok {
+		_ = UpdateOption("UserUsableGroups", jsonOut)
+	}
+	ratios := ratio_setting.GetGroupRatioCopy()
+	ratioChanged := false
+	wantRatios := map[string]float64{"default": 1, "vip": 0.95, "vip2": 0.9}
+	for group, ratio := range wantRatios {
+		if _, ok := ratios[group]; ok {
+			continue
+		}
+		ratios[group] = ratio
+		ratioChanged = true
+	}
+	if ratioChanged {
+		raw, err := common.Marshal(ratios)
+		if err == nil {
+			_ = UpdateOption("GroupRatio", string(raw))
+		}
+	}
+	if !setting.EnsureDefaultMembershipRateLimits() {
+		return
+	}
+	_ = UpdateOption("ModelRequestRateLimitDurationMinutes", strconv.Itoa(setting.ModelRequestRateLimitDurationMinutes))
+	_ = UpdateOption("ModelRequestRateLimitGroup", setting.ModelRequestRateLimitGroup2JSONString())
+	if !setting.ModelRequestRateLimitEnabled {
+		_ = UpdateOption("ModelRequestRateLimitEnabled", "true")
+	}
+	if phone := strings.TrimSpace(common.OptionMap["MembershipContactPhone"]); phone == "" {
+		_ = UpdateOption("MembershipContactPhone", setting.GetMembershipContactPhone())
+	}
 }
 
 func loadOptionsFromDatabase() {
@@ -336,6 +375,8 @@ func updateOptionMap(key string, value string) (err error) {
 	if strings.HasSuffix(key, "Enabled") || key == "DefaultCollapseSidebar" || key == "DefaultUseAutoGroup" || key == "SMTPForceAuthLogin" || key == "SMTPInsecureSkipVerify" {
 		boolValue := value == "true"
 		switch key {
+		case "HeaderShowSystemNameEnabled":
+			common.HeaderShowSystemNameEnabled = boolValue
 		case "PasswordRegisterEnabled":
 			common.PasswordRegisterEnabled = boolValue
 		case "PasswordLoginEnabled":
@@ -407,6 +448,7 @@ func updateOptionMap(key string, value string) (err error) {
 			setting.CheckSensitiveOnPromptEnabled = boolValue
 		case "ModelRequestRateLimitEnabled":
 			setting.ModelRequestRateLimitEnabled = boolValue
+			invalidateMembershipPublicCache()
 		case "StopOnSensitiveEnabled":
 			setting.StopOnSensitiveEnabled = boolValue
 		case "SMTPSSLEnabled":
@@ -549,7 +591,10 @@ func updateOptionMap(key string, value string) (err error) {
 	case "Footer":
 		common.Footer = value
 	case "SystemName":
-		common.SystemName = value
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			common.SystemName = trimmed
+		}
 	case "Logo":
 		common.Logo = value
 	case "WeChatServerAddress":
@@ -578,12 +623,24 @@ func updateOptionMap(key string, value string) (err error) {
 		common.PreConsumedQuota, _ = strconv.Atoi(value)
 	case "ModelRequestRateLimitCount":
 		setting.ModelRequestRateLimitCount, _ = strconv.Atoi(value)
+		invalidateMembershipPublicCache()
 	case "ModelRequestRateLimitDurationMinutes":
 		setting.ModelRequestRateLimitDurationMinutes, _ = strconv.Atoi(value)
+		invalidateMembershipPublicCache()
 	case "ModelRequestRateLimitSuccessCount":
 		setting.ModelRequestRateLimitSuccessCount, _ = strconv.Atoi(value)
+		invalidateMembershipPublicCache()
 	case "ModelRequestRateLimitGroup":
 		err = setting.UpdateModelRequestRateLimitGroupByJSONString(value)
+		invalidateMembershipPublicCache()
+	case "HeaderNavConfig":
+		err = setting.UpdateHeaderNavConfigByJSONString(value)
+		if err == nil {
+			common.OptionMap["HeaderNavModules"] = setting.DeriveHeaderNavModulesJSON()
+		}
+	case "MembershipContactPhone":
+		setting.SetMembershipContactPhone(value)
+		invalidateMembershipPublicCache()
 	case "RetryTimes":
 		common.RetryTimes, _ = strconv.Atoi(value)
 	case "DataExportInterval":
@@ -594,10 +651,12 @@ func updateOptionMap(key string, value string) (err error) {
 		err = ratio_setting.UpdateModelRatioByJSONString(value)
 	case "GroupRatio":
 		err = ratio_setting.UpdateGroupRatioByJSONString(value)
+		invalidateMembershipPublicCache()
 	case "GroupGroupRatio":
 		err = ratio_setting.UpdateGroupGroupRatioByJSONString(value)
 	case "UserUsableGroups":
 		err = setting.UpdateUserUsableGroupsByJSONString(value)
+		invalidateMembershipPublicCache()
 	case "CompletionRatio":
 		err = ratio_setting.UpdateCompletionRatioByJSONString(value)
 	case "ModelPrice":
@@ -640,6 +699,10 @@ func updateOptionMap(key string, value string) (err error) {
 		// No additional in-memory variable to update.
 	}
 	return err
+}
+
+func invalidateMembershipPublicCache() {
+	setting.InvalidateMembershipPublicCache()
 }
 
 // handleConfigUpdate 处理分层配置更新，返回是否已处理

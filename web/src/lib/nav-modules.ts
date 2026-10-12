@@ -34,6 +34,38 @@ export type HeaderNavModules = {
   [key: string]: boolean | ModuleAccess
 }
 
+export type HeaderNavItemKind = 'builtin' | 'custom'
+
+export type HeaderNavItem = {
+  kind: HeaderNavItemKind
+  key?: string
+  id?: string
+  title?: string
+  content?: string
+  enabled: boolean
+  require_auth?: boolean
+}
+
+export type HeaderNavConfig = {
+  items: HeaderNavItem[]
+}
+
+export const HEADER_NAV_BUILTIN_KEYS = [
+  'home',
+  'console',
+  'pricing',
+  'rankings',
+  'docs',
+  'about',
+] as const
+
+export type HeaderNavBuiltinKey = (typeof HEADER_NAV_BUILTIN_KEYS)[number]
+
+export const HEADER_NAV_AUTH_KEYS: HeaderNavBuiltinKey[] = [
+  'pricing',
+  'rankings',
+]
+
 const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
   home: true,
   console: true,
@@ -41,6 +73,27 @@ const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
   rankings: { enabled: true, requireAuth: false },
   docs: true,
   about: true,
+}
+
+export const DEFAULT_HEADER_NAV_CONFIG: HeaderNavConfig = {
+  items: [
+    { kind: 'builtin', key: 'home', enabled: true },
+    { kind: 'builtin', key: 'console', enabled: true },
+    {
+      kind: 'builtin',
+      key: 'pricing',
+      enabled: true,
+      require_auth: false,
+    },
+    {
+      kind: 'builtin',
+      key: 'rankings',
+      enabled: true,
+      require_auth: false,
+    },
+    { kind: 'builtin', key: 'docs', enabled: true },
+    { kind: 'builtin', key: 'about', enabled: true },
+  ],
 }
 
 const DEFAULTS: Record<HeaderNavModule, ModuleAccess> = {
@@ -142,6 +195,65 @@ export function parseHeaderNavModulesFromStatus(
   status: Record<string, unknown> | null
 ): HeaderNavModules {
   return parseHeaderNavModules(status?.HeaderNavModules)
+}
+
+function isHeaderNavBuiltinKey(value: string): value is HeaderNavBuiltinKey {
+  return (HEADER_NAV_BUILTIN_KEYS as readonly string[]).includes(value)
+}
+
+/**
+ * Parse ordered HeaderNavConfig from status/options.
+ * Returns null when missing, empty, or unparsable so callers can fall back.
+ */
+export function parseHeaderNavConfig(raw: unknown): HeaderNavConfig | null {
+  const parsed = parseHeaderNavRecord(raw)
+  if (!parsed) return null
+
+  const itemsRaw = parsed.items
+  if (!Array.isArray(itemsRaw) || itemsRaw.length === 0) return null
+
+  const items: HeaderNavItem[] = []
+  for (const entry of itemsRaw) {
+    if (!entry || typeof entry !== 'object') continue
+    const record = entry as Record<string, unknown>
+    const kind = record.kind
+    if (kind === 'builtin') {
+      const key = typeof record.key === 'string' ? record.key : ''
+      if (!isHeaderNavBuiltinKey(key)) continue
+      const item: HeaderNavItem = {
+        kind: 'builtin',
+        key,
+        enabled: parseHeaderNavBoolean(record.enabled, true),
+      }
+      if (HEADER_NAV_AUTH_KEYS.includes(key)) {
+        item.require_auth = parseHeaderNavBoolean(record.require_auth, false)
+      }
+      items.push(item)
+      continue
+    }
+    if (kind === 'custom') {
+      const id = typeof record.id === 'string' ? record.id.trim() : ''
+      const title = typeof record.title === 'string' ? record.title : ''
+      if (!id || !title) continue
+      items.push({
+        kind: 'custom',
+        id,
+        title,
+        content: typeof record.content === 'string' ? record.content : '',
+        enabled: parseHeaderNavBoolean(record.enabled, true),
+        require_auth: parseHeaderNavBoolean(record.require_auth, false),
+      })
+    }
+  }
+
+  if (items.length === 0) return null
+  return { items }
+}
+
+export function parseHeaderNavConfigFromStatus(
+  status: Record<string, unknown> | null
+): HeaderNavConfig | null {
+  return parseHeaderNavConfig(status?.HeaderNavConfig)
 }
 
 /**

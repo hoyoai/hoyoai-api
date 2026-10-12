@@ -20,7 +20,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useCallback } from 'react'
 
 import { DEFAULT_LOGO } from '@/lib/constants'
-import { applyFaviconToDom } from '@/lib/dom-utils'
 import { ensureStatus } from '@/lib/status-query'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
@@ -89,12 +88,11 @@ export function useSystemConfig(options: UseSystemConfigOptions = {}) {
     // Skip if logo is already loaded
     if (!logo || logo === loadedLogoUrl) return
 
-    // Preload new logo
+    // Preload new logo (header wordmark only — do not push it into the tab icon)
     return preloadImage(
       logo,
       () => {
         setLoadedLogoUrl(logo)
-        applyFaviconToDom(logo)
       },
       () => {
         if (logo !== DEFAULT_LOGO) {
